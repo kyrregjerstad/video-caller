@@ -1,7 +1,7 @@
 import { DurableObject } from 'cloudflare:workers';
 
 export class MyDurableObject extends DurableObject<Env> {
-	sessions: Map<WebSocket, { id: string; name: string }>;
+	sessions: Map<WebSocket, { id: string | null }>;
 
 	constructor(ctx: DurableObjectState, env: Env) {
 		super(ctx, env);
@@ -13,19 +13,28 @@ export class MyDurableObject extends DurableObject<Env> {
 	}
 
 	async fetch(_request: Request) {
-		const pair = new WebSocketPair();
-		this.ctx.acceptWebSocket(pair[1]);
-		this.sessions.set(pair[1], {});
-		return new Response(null, { status: 101, webSocket: pair[0] });
+		const webSocketPair = new WebSocketPair();
+		const clientSocket = webSocketPair[0];
+		const serverSocket = webSocketPair[1];
+		this.ctx.acceptWebSocket(serverSocket);
+		this.sessions.set(serverSocket, { id: null });
+		return new Response(null, { status: 101, webSocket: clientSocket });
 	}
 
 	webSocketMessage(ws: WebSocket, message: string | ArrayBuffer): void | Promise<void> {
 		const session = this.sessions.get(ws);
-		if (!session?.id) {
-			session!.id = crypto.randomUUID();
-			ws.serializeAttachment({ ...ws.deserializeAttachment(), id: session!.id });
-			ws.send(JSON.stringify({ ready: true, id: session!.id }));
+
+		if (!session) {
+			this.close(ws);
+			return;
 		}
+
+		if (!session.id) {
+			session.id = crypto.randomUUID();
+			ws.serializeAttachment({ ...ws.deserializeAttachment(), id: session.id });
+			ws.send(JSON.stringify({ ready: true, id: session.id }));
+		}
+
 		this.broadcast(ws, message);
 	}
 
@@ -66,7 +75,7 @@ export default {
 			return new Response('Expected Upgrade: websocket', { status: 426 });
 		}
 
-		const id: DurableObjectId = env.MY_DURABLE_OBJECT.idFromName(new URL(request.url).pathname);
+		const id = env.MY_DURABLE_OBJECT.idFromName(new URL(request.url).pathname);
 		const stub = env.MY_DURABLE_OBJECT.get(id);
 
 		return stub.fetch(request);
