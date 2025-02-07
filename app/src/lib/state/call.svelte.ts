@@ -13,10 +13,11 @@ const CALL_STATE_KEY = Symbol('CALL_STATE');
 type CallState = 'connecting' | 'connected' | 'disconnected' | 'ended';
 
 type WebSocketMessage = {
-	type: 'joined' | 'candidate' | 'offer' | 'answer' | 'left';
+	type: 'joined' | 'candidate' | 'offer' | 'answer' | 'left' | 'participant_joined';
 	candidate?: RTCIceCandidate;
 	offer?: RTCSessionDescriptionInit;
 	answer?: RTCSessionDescriptionInit;
+	id?: string; // Participant ID
 };
 
 const iceServers = import.meta.env.PROD
@@ -213,11 +214,11 @@ export class PeerState {
 export class CallManager {
 	ws = $state<WebSocket | null>(null);
 	mediaState = new MediaState();
-	peerState: PeerState;
+	peers = $state<Map<string, PeerState>>(new Map());
 	wsUrl = PUBLIC_WS_URL;
 
 	constructor(private callId: string) {
-		this.peerState = new PeerState(this.mediaState, iceServers, this.wsSend.bind(this));
+		// Initialize empty peers map
 	}
 
 	private wsSend(data: WebSocketMessage) {
@@ -226,29 +227,53 @@ export class CallManager {
 		}
 	}
 
+	private getPeer(participantId: string): PeerState {
+		let peer = this.peers.get(participantId);
+		if (!peer) {
+			peer = new PeerState(this.mediaState, iceServers, this.wsSend.bind(this));
+			this.peers.set(participantId, peer);
+		}
+		return peer;
+	}
+
 	async handleMessages(event: MessageEvent) {
 		const message = JSON.parse(event.data);
 		console.log(message);
 
+		if (!message.id && message.type !== 'ready') {
+			console.error('Message missing participant ID:', message);
+			return;
+		}
+
 		switch (message.type) {
+			case 'participant_joined': {
+				const peer = this.getPeer(message.id);
+				await peer.makeCall();
+				break;
+			}
 			case 'joined':
-				await this.peerState.makeCall();
+				// Someone else joined, wait for their offer
+				this.getPeer(message.id);
 				break;
 			case 'candidate':
-				await this.peerState.acceptCandidate(message.candidate);
+				await this.getPeer(message.id).acceptCandidate(message.candidate);
 				break;
 			case 'offer':
-				await this.peerState.answerCall(message.offer);
+				await this.getPeer(message.id).answerCall(message.offer);
 				break;
 			case 'answer':
-				await this.peerState.startCall(message.answer);
+				await this.getPeer(message.id).startCall(message.answer);
 				break;
-			case 'left':
-				await this.peerState.endCall();
+			case 'left': {
+				const existingPeer = this.peers.get(message.id);
+				if (existingPeer) {
+					await existingPeer.endCall();
+					this.peers.delete(message.id);
+				}
 				break;
+			}
 			default:
 				console.error('Unknown message type:', message.type);
-				this.peerState.callState = 'disconnected';
 		}
 	}
 
@@ -266,13 +291,17 @@ export class CallManager {
 
 	cleanup() {
 		this.mediaState.cleanup();
+		for (const peer of this.peers.values()) {
+			peer.endCall();
+		}
+		this.peers.clear();
 		if (this.ws) {
 			this.ws.close();
 		}
 	}
 
 	clientEndCall() {
-		this.peerState.endCall();
+		this.cleanup();
 		goto(`/call/${this.callId}/finished`);
 	}
 }

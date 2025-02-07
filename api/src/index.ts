@@ -33,6 +33,9 @@ export class VideoCallRoom extends DurableObject<Env> {
 			participant.id = crypto.randomUUID();
 			connection.serializeAttachment({ ...connection.deserializeAttachment(), id: participant.id });
 			connection.send(JSON.stringify({ ready: true, id: participant.id }));
+
+			// Broadcast to others that a new participant joined
+			this.broadcastToRoom(connection, JSON.stringify({ type: 'participant_joined', id: participant.id }));
 		}
 
 		this.broadcastToRoom(connection, message);
