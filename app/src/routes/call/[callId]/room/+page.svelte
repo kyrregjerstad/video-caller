@@ -22,7 +22,6 @@
 	let peerConnection = $state<RTCPeerConnection | null>(null);
 	let callState = $state<'connecting' | 'connected' | 'disconnected' | 'ended'>('connecting');
 
-	// State for remote video stream
 	let remoteStream = $state<MediaStream | null>(null);
 	let peerVideo = $state<HTMLVideoElement | null>(null);
 
