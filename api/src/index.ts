@@ -1,6 +1,6 @@
 import { DurableObject } from 'cloudflare:workers';
 
-export class MyDurableObject extends DurableObject<Env> {
+export class VideoCallRoom extends DurableObject<Env> {
 	sessions: Map<WebSocket, { id: string | null }>;
 
 	constructor(ctx: DurableObjectState, env: Env) {
@@ -75,8 +75,8 @@ export default {
 			return new Response('Expected Upgrade: websocket', { status: 426 });
 		}
 
-		const id = env.MY_DURABLE_OBJECT.idFromName(new URL(request.url).pathname);
-		const stub = env.MY_DURABLE_OBJECT.get(id);
+		const id = env.VIDEO_CALL_ROOM.idFromName(new URL(request.url).pathname);
+		const stub = env.VIDEO_CALL_ROOM.get(id);
 
 		return stub.fetch(request);
 	},
