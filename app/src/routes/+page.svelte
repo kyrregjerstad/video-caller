@@ -3,18 +3,24 @@
 	import Button from '$lib/components/ui/button/button.svelte';
 	import * as Card from '$lib/components/ui/card';
 	import Input from '$lib/components/ui/input/input.svelte';
+	import { uniqueNamesGenerator, adjectives, colors, animals } from 'unique-names-generator';
 
 	let callId = $state('');
 
 	function startNewCall() {
-		// Generate a random call ID
-		const newCallId = crypto.randomUUID();
-		goto(`/call/${newCallId}`);
+		// Generate a friendly call ID using three random words
+		const newCallId = uniqueNamesGenerator({
+			dictionaries: [adjectives, colors, animals],
+			separator: '-',
+			length: 3,
+			style: 'lowerCase'
+		});
+		goto(`/call/${newCallId}/room`);
 	}
 
 	function joinCall() {
 		if (callId.trim()) {
-			goto(`/call/${callId}`);
+			goto(`/call/${callId}/room`);
 		}
 	}
 </script>

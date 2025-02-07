@@ -31,6 +31,10 @@ importers:
         version: 3.107.3(@cloudflare/workers-types@4.20250204.0)
 
   app:
+    dependencies:
+      unique-names-generator:
+        specifier: ^4.7.1
+        version: 4.7.1
     devDependencies:
       '@eslint/compat':
         specifier: ^1.2.5
@@ -2226,6 +2230,10 @@ packages:
   unenv@2.0.0-rc.1:
     resolution: {integrity: sha512-PU5fb40H8X149s117aB4ytbORcCvlASdtF97tfls4BPIyj4PeVxvpSuy1jAptqYHqB0vb2w2sHvzM0XWcp2OKg==}
 
+  unique-names-generator@4.7.1:
+    resolution: {integrity: sha512-lMx9dX+KRmG8sq6gulYYpKWZc9RlGsgBR6aoO8Qsm3qvkSJ+3rAymr+TnV8EDMrIrwuFJ4kruzMWM/OpYzPoow==}
+    engines: {node: '>=8'}
+
   update-browserslist-db@1.1.2:
     resolution: {integrity: sha512-PPypAm5qvlD7XMZC3BujecnaOxwhrtoFR+Dqkk5Aa/6DssiH0ibKoketaj9w8LP7Bont1rYeoV5plxD7RTEPRg==}
     hasBin: true
@@ -4348,6 +4356,8 @@ snapshots:
       ohash: 1.1.4
       pathe: 1.1.2
       ufo: 1.5.4
+
+  unique-names-generator@4.7.1: {}
 
   update-browserslist-db@1.1.2(browserslist@4.24.4):
     dependencies:
