@@ -2,7 +2,7 @@
 
 A real-time video calling application built to explore and learn WebRTC technology and Cloudflare's Durable Objects. This project demonstrates how to implement peer-to-peer video communication using modern web technologies.
 
-**Live Demo**: [http://call.kyrre.dev](http://call.kyrre.dev)
+**Live Demo**: [https://call.kyrre.dev](https://call.kyrre.dev)
 
 ## Technology Stack
 
@@ -61,7 +61,7 @@ The application is deployed using Cloudflare's infrastructure:
 
 - Frontend: Cloudflare Pages
 
-  - Live at [http://call.kyrre.dev](http://call.kyrre.dev)
+  - Live at [https://call.kyrre.dev](https://call.kyrre.dev)
   - Automatic deployments on push to main branch
   - Built using SvelteKit adapter for Cloudflare Pages
 
