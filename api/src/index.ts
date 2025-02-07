@@ -1,83 +1,84 @@
 import { DurableObject } from 'cloudflare:workers';
 
 export class VideoCallRoom extends DurableObject<Env> {
-	sessions: Map<WebSocket, { id: string | null }>;
+	participants: Map<WebSocket, { id: string | null }>;
 
 	constructor(ctx: DurableObjectState, env: Env) {
 		super(ctx, env);
 
-		this.sessions = new Map();
-		this.ctx.getWebSockets().forEach((ws) => {
-			this.sessions.set(ws, { ...ws.deserializeAttachment() });
+		this.participants = new Map();
+		this.ctx.getWebSockets().forEach((connection) => {
+			this.participants.set(connection, { ...connection.deserializeAttachment() });
 		});
 	}
 
-	async fetch(_request: Request) {
+	async fetch(request: Request) {
 		const webSocketPair = new WebSocketPair();
 		const clientSocket = webSocketPair[0];
 		const serverSocket = webSocketPair[1];
 		this.ctx.acceptWebSocket(serverSocket);
-		this.sessions.set(serverSocket, { id: null });
+		this.participants.set(serverSocket, { id: null });
 		return new Response(null, { status: 101, webSocket: clientSocket });
 	}
 
-	webSocketMessage(ws: WebSocket, message: string | ArrayBuffer): void | Promise<void> {
-		const session = this.sessions.get(ws);
+	webSocketMessage(connection: WebSocket, message: string | ArrayBuffer): void | Promise<void> {
+		const participant = this.participants.get(connection);
 
-		if (!session) {
-			this.close(ws);
+		if (!participant) {
+			this.disconnectParticipant(connection);
 			return;
 		}
 
-		if (!session.id) {
-			session.id = crypto.randomUUID();
-			ws.serializeAttachment({ ...ws.deserializeAttachment(), id: session.id });
-			ws.send(JSON.stringify({ ready: true, id: session.id }));
+		if (!participant.id) {
+			participant.id = crypto.randomUUID();
+			connection.serializeAttachment({ ...connection.deserializeAttachment(), id: participant.id });
+			connection.send(JSON.stringify({ ready: true, id: participant.id }));
 		}
 
-		this.broadcast(ws, message);
+		this.broadcastToRoom(connection, message);
 	}
 
-	broadcast(sender: WebSocket, message: string | ArrayBuffer): void {
-		const id = this.sessions.get(sender)?.id;
+	broadcastToRoom(sender: WebSocket, message: string | ArrayBuffer): void {
+		const senderId = this.participants.get(sender)?.id;
 
-		for (const [ws] of this.sessions.entries()) {
-			if (ws === sender) continue;
+		for (const [connection] of this.participants.entries()) {
+			if (connection === sender) continue;
 
 			if (typeof message === 'string') {
-				ws.send(JSON.stringify({ ...JSON.parse(message), id }));
+				connection.send(JSON.stringify({ ...JSON.parse(message), id: senderId }));
 			} else {
-				ws.send(JSON.stringify({ ...message, id }));
+				connection.send(JSON.stringify({ ...message, id: senderId }));
 			}
 		}
 	}
 
-	webSocketClose(ws: WebSocket, code: number, reason: string, wasClean: boolean): void | Promise<void> {
-		this.close(ws);
-	}
-	webSocketError(ws: WebSocket, error: unknown): void | Promise<void> {
-		this.close(ws);
+	webSocketClose(connection: WebSocket, code: number, reason: string, wasClean: boolean): void | Promise<void> {
+		this.disconnectParticipant(connection);
 	}
 
-	close(ws: WebSocket): void {
-		const session = this.sessions.get(ws);
-		if (!session?.id) return;
+	webSocketError(connection: WebSocket, error: unknown): void | Promise<void> {
+		this.disconnectParticipant(connection);
+	}
 
-		this.broadcast(ws, JSON.stringify({ type: 'close', id: session.id }));
-		this.sessions.delete(ws);
+	disconnectParticipant(connection: WebSocket): void {
+		const participant = this.participants.get(connection);
+		if (!participant?.id) return;
+
+		this.broadcastToRoom(connection, JSON.stringify({ type: 'close', id: participant.id }));
+		this.participants.delete(connection);
 	}
 }
 
 export default {
 	async fetch(request, env, _ctx): Promise<Response> {
-		const upgrade = request.headers.get('Upgrade');
-		if (!upgrade || upgrade !== 'websocket') {
+		const upgradeHeader = request.headers.get('Upgrade');
+		if (!upgradeHeader || upgradeHeader !== 'websocket') {
 			return new Response('Expected Upgrade: websocket', { status: 426 });
 		}
 
-		const id = env.VIDEO_CALL_ROOM.idFromName(new URL(request.url).pathname);
-		const stub = env.VIDEO_CALL_ROOM.get(id);
+		const roomId = env.VIDEO_CALL_ROOM.idFromName(new URL(request.url).pathname);
+		const room = env.VIDEO_CALL_ROOM.get(roomId);
 
-		return stub.fetch(request);
+		return room.fetch(request);
 	},
 } satisfies ExportedHandler<Env>;
