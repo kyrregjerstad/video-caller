@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import Button from '$lib/components/ui/button/button.svelte';
 	import * as Card from '$lib/components/ui/card';
 	import Input from '$lib/components/ui/input/input.svelte';
@@ -6,11 +7,15 @@
 	let callId = $state('');
 
 	function startNewCall() {
-		console.log('Starting a new call');
+		// Generate a random call ID
+		const newCallId = crypto.randomUUID();
+		goto(`/call/${newCallId}`);
 	}
 
 	function joinCall() {
-		console.log('Joining call with ID:', callId);
+		if (callId.trim()) {
+			goto(`/call/${callId}`);
+		}
 	}
 </script>
 
