@@ -4,6 +4,7 @@
 	import { cn } from '$lib/utils';
 	import { GripHorizontal } from 'lucide-svelte';
 	import { Spring } from 'svelte/motion';
+	import type { Action } from 'svelte/action';
 
 	const callManager = getCallManager();
 
@@ -23,95 +24,126 @@
 	let width = $state(256);
 	let height = $derived(width / ASPECT_RATIO);
 
-	let dragStart = $state<{ x: number; y: number; startX: number; startY: number } | null>(null);
-	let resizeStart = $state<{ startX: number; initialWidth: number } | null>(null);
 	let isDragging = $state(false);
 	let isResizing = $state(false);
 
-	function onDragStart(event: MouseEvent) {
-		if (!isPipMode || isResizing) return;
-		isDragging = true;
-		dragStart = {
-			x: position.current.x,
-			y: position.current.y,
-			startX: event.clientX,
-			startY: event.clientY
-		};
+	interface DraggableParams {
+		onDrag?: (x: number, y: number) => void;
 	}
 
-	function onDragMove(event: MouseEvent) {
-		if (!isDragging || !dragStart || isResizing) return;
+	const draggable: Action<HTMLElement, DraggableParams> = (node, params) => {
+		let dragStart: { x: number; y: number; startX: number; startY: number } | null = null;
 
-		position.set({
-			x: dragStart.x + (event.clientX - dragStart.startX),
-			y: dragStart.y + (event.clientY - dragStart.startY)
-		});
-	}
+		function onDragStart(event: MouseEvent) {
+			if (isResizing) return;
+			isDragging = true;
+			dragStart = {
+				x: position.current.x,
+				y: position.current.y,
+				startX: event.clientX,
+				startY: event.clientY
+			};
 
-	function onDragEnd() {
-		isDragging = false;
-		dragStart = null;
-	}
-
-	function startResize(event: MouseEvent) {
-		isResizing = true;
-		event.stopPropagation(); // Prevent dragging when resizing
-
-		resizeStart = {
-			startX: event.clientX,
-			initialWidth: width
-		};
-	}
-
-	function onResize(event: MouseEvent) {
-		if (!resizeStart) return;
-
-		let newWidth = $state.snapshot(width);
-		let delta = 0;
-
-		delta = event.clientX - resizeStart.startX;
-		newWidth = resizeStart.initialWidth - delta;
-
-		// Apply size constraints
-		if (newWidth >= MIN_WIDTH && newWidth <= MAX_WIDTH) {
-			width = newWidth;
-		}
-	}
-
-	function stopResize() {
-		isResizing = false;
-		resizeStart = null;
-	}
-
-	$effect(() => {
-		if (isDragging) {
 			window.addEventListener('mousemove', onDragMove);
 			window.addEventListener('mouseup', onDragEnd);
-
-			return () => {
-				window.removeEventListener('mousemove', onDragMove);
-				window.removeEventListener('mouseup', onDragEnd);
-			};
 		}
-	});
 
-	$effect(() => {
-		if (resizeStart) {
-			window.addEventListener('mousemove', onResize);
-			window.addEventListener('mouseup', stopResize);
+		function onDragMove(event: MouseEvent) {
+			if (!isDragging || !dragStart || isResizing) return;
 
-			return () => {
-				window.removeEventListener('mousemove', onResize);
-				window.removeEventListener('mouseup', stopResize);
-			};
+			const x = dragStart.x + (event.clientX - dragStart.startX);
+			const y = dragStart.y + (event.clientY - dragStart.startY);
+
+			params?.onDrag?.(x, y);
 		}
-	});
+
+		function onDragEnd() {
+			isDragging = false;
+			dragStart = null;
+			window.removeEventListener('mousemove', onDragMove);
+			window.removeEventListener('mouseup', onDragEnd);
+		}
+
+		function cleanup() {
+			window.removeEventListener('mousemove', onDragMove);
+			window.removeEventListener('mouseup', onDragEnd);
+		}
+
+		node.addEventListener('mousedown', onDragStart);
+
+		return {
+			destroy() {
+				node.removeEventListener('mousedown', onDragStart);
+				cleanup();
+			},
+			update(newParams: DraggableParams) {
+				params = newParams;
+			}
+		};
+	};
+
+	interface ResizableParams {
+		onResize?: (width: number) => void;
+	}
+
+	const resizable: Action<HTMLElement, ResizableParams> = (node, params) => {
+		let resizeStart: { startX: number; initialWidth: number } | null = null;
+
+		function onResizeStart(event: MouseEvent) {
+			isResizing = true;
+			event.stopPropagation();
+
+			resizeStart = {
+				startX: event.clientX,
+				initialWidth: width
+			};
+
+			window.addEventListener('mousemove', onResizeMove);
+			window.addEventListener('mouseup', onResizeEnd);
+		}
+
+		function onResizeMove(event: MouseEvent) {
+			if (!resizeStart) return;
+
+			let newWidth = $state.snapshot(width);
+			const delta = event.clientX - resizeStart.startX;
+			newWidth = resizeStart.initialWidth - delta;
+
+			if (newWidth >= MIN_WIDTH && newWidth <= MAX_WIDTH) {
+				params?.onResize?.(newWidth);
+			}
+		}
+
+		function onResizeEnd() {
+			isResizing = false;
+			resizeStart = null;
+			window.removeEventListener('mousemove', onResizeMove);
+			window.removeEventListener('mouseup', onResizeEnd);
+		}
+
+		function cleanup() {
+			window.removeEventListener('mousemove', onResizeMove);
+			window.removeEventListener('mouseup', onResizeEnd);
+		}
+
+		node.addEventListener('mousedown', onResizeStart);
+
+		return {
+			destroy() {
+				node.removeEventListener('mousedown', onResizeStart);
+				cleanup();
+			},
+			update(newParams: ResizableParams) {
+				params = newParams;
+			}
+		};
+	};
 </script>
 
 <svelte:window
 	onmouseleave={() => {
-		onDragEnd();
-		stopResize();
+		isDragging = false;
+		isResizing = false;
 	}}
 />
 
@@ -126,7 +158,9 @@
 	style={isPipMode
 		? `transform: translate3d(${position.current.x}px, ${position.current.y}px, 0); width: ${width}px; height: ${height}px;`
 		: ''}
-	onmousedown={onDragStart}
+	use:draggable={{
+		onDrag: (x, y) => position.set({ x, y })
+	}}
 >
 	<video
 		bind:this={callManager.mediaState.localVideo}
@@ -147,16 +181,22 @@
 
 	{#if isPipMode}
 		<!-- Left resize handles -->
-		<Button
-			variant="ghost"
-			size="icon"
-			class={cn(
-				'top absolute left-0 top-0 opacity-0 transition-opacity hover:bg-white/10 group-hover:opacity-100',
-				isResizing && 'opacity-100'
-			)}
-			onmousedown={(e) => startResize(e)}
+		<div
+			use:resizable={{
+				onResize: (w) => (width = w)
+			}}
+			class="absolute left-0 top-0"
 		>
-			<GripHorizontal class="size-8" />
-		</Button>
+			<Button
+				variant="ghost"
+				size="icon"
+				class={cn(
+					'opacity-0 transition-opacity hover:bg-white/10 group-hover:opacity-100',
+					isResizing && 'opacity-100'
+				)}
+			>
+				<GripHorizontal class="size-8" />
+			</Button>
+		</div>
 	{/if}
 </div>
