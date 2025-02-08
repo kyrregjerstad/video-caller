@@ -109,7 +109,7 @@
 			<div class="relative h-[calc(100dvh-16rem)] w-full">
 				<div
 					class={cn(
-						'grid  w-full gap-4',
+						'grid h-full w-full gap-4',
 						getGridCols(
 							callManager.shouldShowPip
 								? participantsToDisplay.length
@@ -118,12 +118,14 @@
 					)}
 				>
 					{#each participantsToDisplay as peer (peer.id)}
-						<span animate:flip={{ duration: 500, easing: cubicOut }}>
+						<span class=" min-h-0" animate:flip={{ duration: 500, easing: cubicOut }}>
 							<PeerVideoTile {peer} />
 						</span>
 					{/each}
 
-					<ClientVideoTile />
+					<span class=" min-h-0">
+						<ClientVideoTile />
+					</span>
 				</div>
 			</div>
 			<CallControls />
