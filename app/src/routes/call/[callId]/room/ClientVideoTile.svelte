@@ -5,6 +5,8 @@
 	import { GripHorizontal } from 'lucide-svelte';
 	import { Spring } from 'svelte/motion';
 
+	const callManager = getCallManager();
+
 	let { isPipMode = $bindable(false) } = $props();
 
 	let position = new Spring(
@@ -14,17 +16,17 @@
 			damping: 0.25
 		}
 	);
+	const MIN_WIDTH = 192; // Minimum width in pixels
+	const MAX_WIDTH = 800; // Maximum width in pixels
+	const ASPECT_RATIO = 16 / 9;
 
-	let width = $state(192); // Starting width
-	let height = $state(108); // 16:9 aspect ratio
+	let width = $state(256);
+	let height = $derived(width / ASPECT_RATIO);
+
 	let dragStart = $state<{ x: number; y: number; startX: number; startY: number } | null>(null);
 	let resizeStart = $state<{ startX: number; initialWidth: number } | null>(null);
 	let isDragging = $state(false);
 	let isResizing = $state(false);
-	let transformOrigin = $state('top left');
-
-	const MIN_WIDTH = 192; // Minimum width in pixels
-	const MAX_WIDTH = 800; // Maximum width in pixels
 
 	function onDragStart(event: MouseEvent) {
 		if (!isPipMode || isResizing) return;
@@ -51,8 +53,6 @@
 		dragStart = null;
 	}
 
-	$inspect('transformOrigin', transformOrigin);
-
 	function startResize(event: MouseEvent) {
 		isResizing = true;
 		event.stopPropagation(); // Prevent dragging when resizing
@@ -66,7 +66,6 @@
 	function onResize(event: MouseEvent) {
 		if (!resizeStart) return;
 
-		const aspectRatio = 16 / 9;
 		let newWidth = $state.snapshot(width);
 		let delta = 0;
 
@@ -76,7 +75,6 @@
 		// Apply size constraints
 		if (newWidth >= MIN_WIDTH && newWidth <= MAX_WIDTH) {
 			width = newWidth;
-			height = newWidth / aspectRatio;
 		}
 	}
 
@@ -108,12 +106,10 @@
 			};
 		}
 	});
-
-	const callManager = getCallManager();
 </script>
 
 <svelte:window
-	on:mouseleave={() => {
+	onmouseleave={() => {
 		onDragEnd();
 		stopResize();
 	}}
