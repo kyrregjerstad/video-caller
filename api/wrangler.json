@@ -6,7 +6,7 @@
 	"migrations": [
 		{
 			"tag": "v1",
-			"new_classes": ["VideoCallRoom"]
+			"new_classes": ["MyDurableObject"]
 		},
 		{
 			"tag": "v2",

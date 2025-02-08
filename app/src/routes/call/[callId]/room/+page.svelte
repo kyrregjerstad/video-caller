@@ -1,21 +1,38 @@
 <script lang="ts">
 	import { page } from '$app/state';
 
+	import DevToolbar from '$lib/components/DevToolbar.svelte';
 	import Button from '$lib/components/ui/button/button.svelte';
 	import * as Card from '$lib/components/ui/card';
-	import { cn } from '$lib/utils';
 	import { CallManager, setCallManager } from '$lib/state/call.svelte';
-	import { VideoIcon, VideoOffIcon, MicIcon, MicOffIcon } from 'lucide-svelte';
+	import { setMockCallManager } from '$lib/state/mock-call.svelte';
+	import { cn } from '$lib/utils';
+	import { MicIcon, MicOffIcon, VideoIcon, VideoOffIcon } from 'lucide-svelte';
 	import { toast } from 'svelte-sonner';
 
 	// Get the call ID from the route parameters
 	const callId = page.params.callId;
 
 	const callManager = setCallManager(new CallManager(callId));
+	const mockCallManager = setMockCallManager();
+
+	// Handle mock participant video streams
+	$effect(() => {
+		if (mockCallManager) {
+			for (const peer of mockCallManager.peers.values()) {
+				if (peer.peerVideo && peer.remoteStream) {
+					peer.peerVideo.srcObject = peer.remoteStream;
+				}
+			}
+		}
+	});
 
 	$effect(() => {
 		callManager.initialize();
-		return () => callManager.cleanup();
+		return () => {
+			callManager.cleanup();
+			mockCallManager?.cleanup();
+		};
 	});
 
 	function handleCopyInviteLink() {
@@ -92,6 +109,32 @@
 						</div>
 					</div>
 				{/each}
+
+				<!-- Mock participants (dev mode only) -->
+				{#if mockCallManager}
+					{#each [...mockCallManager.peers.entries()] as [peerId, peer]}
+						<div class="relative aspect-video w-full overflow-hidden rounded-lg bg-gray-800">
+							<!-- svelte-ignore a11y_media_has_caption -->
+							<!-- svelte-ignore element_invalid_self_closing_tag -->
+							<video
+								bind:this={peer.peerVideo}
+								autoplay
+								playsinline
+								class={cn(
+									'h-full w-full object-cover',
+									peer.callState === 'connected' && 'opacity-100',
+									peer.callState === 'connecting' && 'opacity-50',
+									peer.callState === 'disconnected' && 'opacity-0'
+								)}
+							/>
+							<div
+								class="absolute bottom-4 left-4 rounded bg-gray-900/80 px-2 py-1 text-sm text-white"
+							>
+								Mock {peerId.slice(0, 4)}
+							</div>
+						</div>
+					{/each}
+				{/if}
 			</div>
 
 			<!-- Call controls -->
@@ -132,3 +175,5 @@
 		Copy invite link
 	</Button>
 </div>
+
+<DevToolbar />
