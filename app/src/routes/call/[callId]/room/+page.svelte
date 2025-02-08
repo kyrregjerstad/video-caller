@@ -16,6 +16,8 @@
 	const callManager = setCallManager(new CallManager(callId));
 	const mockCallManager = setMockCallManager();
 
+	let peers = $derived([...callManager.peers.values(), ...(mockCallManager?.peers.values() || [])]);
+
 	// Handle mock participant video streams
 	$effect(() => {
 		if (mockCallManager) {
@@ -87,7 +89,7 @@
 				</div>
 
 				<!-- Remote videos -->
-				{#each [...callManager.peers.entries()] as [peerId, peer]}
+				{#each peers as peer}
 					<div class="relative aspect-video w-full overflow-hidden rounded-lg bg-gray-800">
 						<!-- svelte-ignore a11y_media_has_caption -->
 						<!-- svelte-ignore element_invalid_self_closing_tag -->
@@ -105,36 +107,10 @@
 						<div
 							class="absolute bottom-4 left-4 rounded bg-gray-900/80 px-2 py-1 text-sm text-white"
 						>
-							Participant {peerId.slice(0, 4)}
+							Participant {peer.id.slice(0, 4)}
 						</div>
 					</div>
 				{/each}
-
-				<!-- Mock participants (dev mode only) -->
-				{#if mockCallManager}
-					{#each [...mockCallManager.peers.entries()] as [peerId, peer]}
-						<div class="relative aspect-video w-full overflow-hidden rounded-lg bg-gray-800">
-							<!-- svelte-ignore a11y_media_has_caption -->
-							<!-- svelte-ignore element_invalid_self_closing_tag -->
-							<video
-								bind:this={peer.peerVideo}
-								autoplay
-								playsinline
-								class={cn(
-									'h-full w-full object-cover',
-									peer.callState === 'connected' && 'opacity-100',
-									peer.callState === 'connecting' && 'opacity-50',
-									peer.callState === 'disconnected' && 'opacity-0'
-								)}
-							/>
-							<div
-								class="absolute bottom-4 left-4 rounded bg-gray-900/80 px-2 py-1 text-sm text-white"
-							>
-								Mock {peerId.slice(0, 4)}
-							</div>
-						</div>
-					{/each}
-				{/if}
 			</div>
 
 			<!-- Call controls -->

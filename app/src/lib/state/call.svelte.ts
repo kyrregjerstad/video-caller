@@ -7,10 +7,18 @@ import {
 	PUBLIC_TURN_SERVER_PASSWORD,
 	PUBLIC_WS_URL
 } from '$env/static/public';
+import { SvelteMap } from 'svelte/reactivity';
 
 const CALL_STATE_KEY = Symbol('CALL_STATE');
 
 type CallState = 'connecting' | 'connected' | 'disconnected' | 'ended';
+
+export interface Peer {
+	id: string;
+	peerVideo: HTMLVideoElement | null;
+	remoteStream: MediaStream | null;
+	callState: CallState | 'connecting' | 'connected' | 'disconnected';
+}
 
 type WebSocketMessage = {
 	type: 'joined' | 'candidate' | 'offer' | 'answer' | 'left' | 'participant_joined';
@@ -126,17 +134,21 @@ export class MediaState {
 	}
 }
 
-export class PeerState {
+export class PeerState implements Peer {
+	id: string;
 	connection = $state<RTCPeerConnection | null>(null);
 	remoteStream = $state<MediaStream | null>(null);
 	peerVideo = $state<HTMLVideoElement | null>(null);
 	callState = $state<CallState>('connecting');
 
 	constructor(
+		id: string,
 		private mediaState: MediaState,
 		private iceServers: RTCIceServer[],
 		private wsSend: (data: WebSocketMessage) => void
-	) {}
+	) {
+		this.id = id;
+	}
 
 	async connectToPeer() {
 		this.connection = new RTCPeerConnection({ iceServers: this.iceServers });
@@ -214,7 +226,7 @@ export class PeerState {
 export class CallManager {
 	ws = $state<WebSocket | null>(null);
 	mediaState = new MediaState();
-	peers = $state<Map<string, PeerState>>(new Map());
+	peers = new SvelteMap<string, PeerState>();
 	wsUrl = PUBLIC_WS_URL;
 
 	constructor(private callId: string) {
@@ -230,7 +242,7 @@ export class CallManager {
 	private getPeer(participantId: string): PeerState {
 		let peer = this.peers.get(participantId);
 		if (!peer) {
-			peer = new PeerState(this.mediaState, iceServers, this.wsSend.bind(this));
+			peer = new PeerState(participantId, this.mediaState, iceServers, this.wsSend.bind(this));
 			this.peers.set(participantId, peer);
 		}
 		return peer;

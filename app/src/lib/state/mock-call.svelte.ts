@@ -1,13 +1,17 @@
 import { browser } from '$app/environment';
 import { getContext, setContext } from 'svelte';
 import { SvelteMap } from 'svelte/reactivity';
+import type { Peer } from './call.svelte';
 
-class MockParticipant {
+class MockParticipant implements Peer {
 	peerVideo = $state<HTMLVideoElement | null>(null);
 	remoteStream = $state<MediaStream | null>(null);
 	callState = $state<'connecting' | 'connected' | 'disconnected'>('connecting');
+	id: string;
 
 	constructor(id: string) {
+		this.id = id;
+
 		// Create a mock video stream with a colored canvas
 		const canvas = document.createElement('canvas');
 		canvas.width = 640;
