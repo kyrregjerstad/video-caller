@@ -177,6 +177,21 @@ export class PeerState implements Peer {
 				this.wsSend({ type: 'candidate', candidate: event.candidate });
 			}
 		};
+
+		this.connection.onconnectionstatechange = () => {
+			switch (this.connection?.connectionState) {
+				case 'connected':
+					this.callState = 'connected';
+					break;
+				case 'disconnected':
+				case 'failed':
+					this.callState = 'disconnected';
+					break;
+				case 'closed':
+					this.callState = 'ended';
+					break;
+			}
+		};
 	}
 
 	async makeCall() {
