@@ -11,14 +11,46 @@
 	import CallControls from './CallControls.svelte';
 	import ClientVideoTile from './ClientVideoTile.svelte';
 	import PeerVideoTile from './PeerVideoTile.svelte';
+	import { cn } from '$lib/utils';
+
+	const GRID_COLS = {
+		0: 'grid-cols-1',
+		1: 'grid-cols-1',
+		2: 'grid-cols-2',
+		3: 'grid-cols-3',
+		4: 'grid-cols-2',
+		5: 'grid-cols-3',
+		6: 'grid-cols-3',
+		7: 'grid-cols-4',
+		8: 'grid-cols-4',
+		9: 'grid-cols-4',
+		10: 'grid-cols-5'
+	} as const;
+
+	function getGridCols(peerCount: number) {
+		const breakpoints = Object.keys(GRID_COLS)
+			.map(Number)
+			.sort((a, b) => a - b);
+
+		for (const breakpoint of breakpoints) {
+			if (peerCount <= breakpoint) {
+				return GRID_COLS[breakpoint as keyof typeof GRID_COLS];
+			}
+		}
+
+		return GRID_COLS[10];
+	}
 
 	const callId = page.params.callId;
+	const debugMode = page.url.searchParams.get('debug') === 'true';
 
 	const callManager = setCallManager(callId);
 	const mockCallManager = setMockCallManager();
 
-	let peers = $derived([...callManager.peers.values(), ...(mockCallManager?.peers.values() || [])]);
-	let isPipMode = $derived(peers.length > 0);
+	let participantsToDisplay = $derived.by(() => {
+		const allPeers = [...callManager.peers.values(), ...(mockCallManager?.peers.values() || [])];
+		return allPeers;
+	});
 
 	$effect(() => {
 		if (mockCallManager) {
@@ -73,23 +105,24 @@
 					</Button>
 				</div>
 			{/if}
-			<div class="relative h-[calc(100vh-16rem)] w-full">
-				{#if peers.length > 0}
-					<div
-						class="grid h-full w-full gap-4"
-						class:grid-cols-2={peers.length === 1}
-						class:grid-cols-3={peers.length >= 2}
-						in:fly={{ y: 20, duration: 300, easing: cubicOut }}
-					>
-						{#each peers as peer}
-							<PeerVideoTile {peer} />
-						{/each}
-					</div>
-				{/if}
-
-				<ClientVideoTile {isPipMode} />
+			<div class="relative h-[calc(100dvh-16rem)] w-full">
+				<div
+					class={cn(
+						'grid h-full w-full gap-4',
+						getGridCols(
+							callManager.shouldShowPip
+								? participantsToDisplay.length
+								: participantsToDisplay.length + 1
+						)
+					)}
+					in:fly={{ y: 20, duration: 300, easing: cubicOut }}
+				>
+					{#each participantsToDisplay as peer}
+						<PeerVideoTile {peer} />
+					{/each}
+					<ClientVideoTile />
+				</div>
 			</div>
-
 			<CallControls />
 		</Card.Content>
 	</Card.Root>
@@ -99,4 +132,6 @@
 	</Button>
 </div>
 
-<DevToolbar />
+{#if debugMode}
+	<DevToolbar />
+{/if}

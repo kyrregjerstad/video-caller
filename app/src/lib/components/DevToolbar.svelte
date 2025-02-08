@@ -1,14 +1,12 @@
 <script lang="ts">
-	import { browser } from '$app/environment';
 	import Button from '$lib/components/ui/button/button.svelte';
 	import * as Card from '$lib/components/ui/card';
 	import { getMockCallManager } from '$lib/state/mock-call.svelte';
 
 	const mockCallManager = getMockCallManager();
-	const isDevMode = browser && import.meta.env.DEV;
 </script>
 
-{#if isDevMode && mockCallManager}
+{#if mockCallManager}
 	<Card.Root class="fixed bottom-4 left-4 z-50 w-80">
 		<Card.Header>
 			<Card.Title>Development Tools</Card.Title>

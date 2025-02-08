@@ -8,7 +8,7 @@
 
 	const callManager = getCallManager();
 
-	let { isPipMode = $bindable(false) } = $props();
+	let isPipMode = $derived(callManager.shouldShowPip);
 
 	let position = new Spring(
 		{ x: 0, y: 0 },
@@ -171,6 +171,9 @@
 			: ''}
 	use:draggable={{
 		onDrag: (x, y) => position.set({ x, y })
+	}}
+	ondblclick={() => {
+		callManager.togglePipMode();
 	}}
 >
 	<video

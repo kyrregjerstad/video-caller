@@ -228,9 +228,18 @@ export class CallManager {
 	mediaState = new MediaState();
 	peers = new SvelteMap<string, PeerState>();
 	wsUrl = PUBLIC_WS_URL;
+	isPipModeEnabled = $state(true); // User preference for PIP mode
 
 	constructor(private callId: string) {
 		// Initialize empty peers map
+	}
+
+	togglePipMode() {
+		this.isPipModeEnabled = !this.isPipModeEnabled;
+	}
+
+	get shouldShowPip() {
+		return this.isPipModeEnabled;
 	}
 
 	private wsSend(data: WebSocketMessage) {
