@@ -5,6 +5,14 @@
 	import { fly } from 'svelte/transition';
 
 	let { peer }: { peer: Peer } = $props();
+	let videoElement = $state<HTMLVideoElement | null>(null);
+
+	$effect(() => {
+		if (videoElement && peer.remoteStream) {
+			videoElement.srcObject = peer.remoteStream;
+			peer.peerVideo = videoElement;
+		}
+	});
 </script>
 
 <div
@@ -12,9 +20,8 @@
 	transition:fly={{ duration: 300, y: 100, delay: 300, easing: cubicOut }}
 >
 	<!-- svelte-ignore a11y_media_has_caption -->
-	<!-- svelte-ignore element_invalid_self_closing_tag -->
 	<video
-		bind:this={peer.peerVideo}
+		bind:this={videoElement}
 		autoplay
 		playsinline
 		class={cn(
@@ -23,7 +30,7 @@
 			peer.callState === 'connecting' && 'opacity-50',
 			peer.callState === 'disconnected' && 'opacity-0'
 		)}
-	/>
+	></video>
 	<div class="absolute bottom-4 left-4 rounded bg-gray-900/80 px-2 py-1 text-sm text-white">
 		Participant {peer.id.slice(0, 4)}
 	</div>
