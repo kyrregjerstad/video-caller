@@ -318,8 +318,8 @@ export class CallManager {
 	}
 }
 
-export function setCallManager(callManager: CallManager) {
-	return setContext(CALL_STATE_KEY, callManager);
+export function setCallManager(callId: string) {
+	return setContext(CALL_STATE_KEY, new CallManager(callId));
 }
 
 export function getCallManager() {

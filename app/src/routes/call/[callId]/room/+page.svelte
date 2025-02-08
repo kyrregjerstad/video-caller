@@ -1,18 +1,18 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import CallControls from './CallControls.svelte';
-	import ClientVideoTile from './ClientVideoTile.svelte';
-	import PeerVideoTile from './PeerVideoTile.svelte';
 	import DevToolbar from '$lib/components/DevToolbar.svelte';
 	import Button from '$lib/components/ui/button/button.svelte';
 	import * as Card from '$lib/components/ui/card';
-	import { CallManager, setCallManager } from '$lib/state/call.svelte';
+	import { setCallManager } from '$lib/state/call.svelte';
 	import { setMockCallManager } from '$lib/state/mock-call.svelte';
 	import { toast } from 'svelte-sonner';
+	import CallControls from './CallControls.svelte';
+	import ClientVideoTile from './ClientVideoTile.svelte';
+	import PeerVideoTile from './PeerVideoTile.svelte';
 
 	const callId = page.params.callId;
 
-	const callManager = setCallManager(new CallManager(callId));
+	const callManager = setCallManager(callId);
 	const mockCallManager = setMockCallManager();
 
 	let peers = $derived([...callManager.peers.values(), ...(mockCallManager?.peers.values() || [])]);
