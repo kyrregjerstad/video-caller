@@ -53,6 +53,15 @@
 	});
 
 	$effect(() => {
+		// Ensure video streams are bound for all peers
+		for (const peer of participantsToDisplay) {
+			if (peer.peerVideo && peer.remoteStream) {
+				peer.peerVideo.srcObject = peer.remoteStream;
+			}
+		}
+	});
+
+	$effect(() => {
 		if (mockCallManager) {
 			for (const peer of mockCallManager.peers.values()) {
 				if (peer.peerVideo && peer.remoteStream) {
