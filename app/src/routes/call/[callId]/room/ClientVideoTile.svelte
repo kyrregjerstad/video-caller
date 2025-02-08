@@ -3,12 +3,12 @@
 	import { getCallManager } from '$lib/state/call.svelte';
 	import { cn } from '$lib/utils';
 	import { GripHorizontal } from 'lucide-svelte';
-	import { Spring } from 'svelte/motion';
 	import type { Action } from 'svelte/action';
+	import { Spring } from 'svelte/motion';
 
 	const callManager = getCallManager();
 
-	let isPipMode = $derived(callManager.shouldShowPip);
+	let isPipMode = $derived(callManager.isPipModeEnabled);
 
 	let position = new Spring(
 		{ x: 0, y: 0 },
@@ -159,7 +159,7 @@
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
 	class={cn(
-		'group relative cursor-grab overflow-hidden rounded-lg bg-gray-800',
+		'group relative cursor-grab overflow-hidden rounded-lg bg-gray-500',
 		isPipMode && 'absolute bottom-4 right-4 z-50',
 		!isPipMode && 'h-full w-full',
 		isDragging && 'cursor-grabbing'
@@ -181,7 +181,7 @@
 		autoplay
 		playsinline
 		muted
-		class="h-full w-full object-cover"
+		class="h-full w-full -scale-x-100 object-cover"
 	></video>
 
 	<div

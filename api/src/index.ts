@@ -1,7 +1,7 @@
 import { DurableObject } from 'cloudflare:workers';
 
 export class VideoCallRoom extends DurableObject<Env> {
-	participants: Map<WebSocket, { id: string | null }>;
+	participants: Map<WebSocket, { id: string }>;
 
 	constructor(ctx: DurableObjectState, env: Env) {
 		super(ctx, env);
@@ -13,11 +13,31 @@ export class VideoCallRoom extends DurableObject<Env> {
 	}
 
 	async fetch(request: Request) {
+		const url = new URL(request.url);
+		const participantId = url.searchParams.get('participantId');
+
+		if (!participantId) {
+			return new Response('Missing participantId', { status: 400 });
+		}
+
 		const webSocketPair = new WebSocketPair();
 		const clientSocket = webSocketPair[0];
 		const serverSocket = webSocketPair[1];
 		this.ctx.acceptWebSocket(serverSocket);
-		this.participants.set(serverSocket, { id: null });
+
+		// Store the participant ID immediately
+		this.participants.set(serverSocket, { id: participantId });
+		serverSocket.serializeAttachment({ id: participantId });
+
+		// Notify others about the reconnection
+		this.broadcastToRoom(
+			serverSocket,
+			JSON.stringify({
+				type: 'participant_joined',
+				id: participantId,
+			}),
+		);
+
 		return new Response(null, { status: 101, webSocket: clientSocket });
 	}
 
@@ -29,13 +49,21 @@ export class VideoCallRoom extends DurableObject<Env> {
 			return;
 		}
 
-		if (!participant.id) {
-			participant.id = crypto.randomUUID();
-			connection.serializeAttachment({ ...connection.deserializeAttachment(), id: participant.id });
-			connection.send(JSON.stringify({ ready: true, id: participant.id }));
+		// Parse the message to get the type
+		if (typeof message === 'string') {
+			const parsedMessage = JSON.parse(message);
 
-			// Broadcast to others that a new participant joined
-			this.broadcastToRoom(connection, JSON.stringify({ type: 'participant_joined', id: participant.id }));
+			// Handle join message specially
+			if (parsedMessage.type === 'joined') {
+				// Send back confirmation with their ID
+				connection.send(
+					JSON.stringify({
+						type: 'joined',
+						id: participant.id,
+					}),
+				);
+				return;
+			}
 		}
 
 		this.broadcastToRoom(connection, message);
@@ -44,11 +72,17 @@ export class VideoCallRoom extends DurableObject<Env> {
 	broadcastToRoom(sender: WebSocket, message: string | ArrayBuffer): void {
 		const senderId = this.participants.get(sender)?.id;
 
-		for (const [connection] of this.participants.entries()) {
+		for (const [connection, participant] of this.participants.entries()) {
 			if (connection === sender) continue;
 
 			if (typeof message === 'string') {
-				connection.send(JSON.stringify({ ...JSON.parse(message), id: senderId }));
+				const parsedMessage = JSON.parse(message);
+				connection.send(
+					JSON.stringify({
+						...parsedMessage,
+						id: senderId,
+					}),
+				);
 			} else {
 				connection.send(JSON.stringify({ ...message, id: senderId }));
 			}
@@ -67,7 +101,13 @@ export class VideoCallRoom extends DurableObject<Env> {
 		const participant = this.participants.get(connection);
 		if (!participant?.id) return;
 
-		this.broadcastToRoom(connection, JSON.stringify({ type: 'close', id: participant.id }));
+		this.broadcastToRoom(
+			connection,
+			JSON.stringify({
+				type: 'left',
+				id: participant.id,
+			}),
+		);
 		this.participants.delete(connection);
 	}
 }

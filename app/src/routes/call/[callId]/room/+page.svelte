@@ -49,7 +49,7 @@
 
 	let participantsToDisplay = $derived.by(() => {
 		const allPeers = [...callManager.peers.values(), ...(mockCallManager?.peers.values() || [])];
-		return allPeers;
+		return allPeers.filter((peer) => peer.id !== callManager.participantId.value);
 	});
 
 	$effect(() => {
@@ -100,7 +100,7 @@
 					class={cn(
 						'grid h-full w-full gap-4',
 						getGridCols(
-							callManager.shouldShowPip
+							callManager.isPipModeEnabled
 								? participantsToDisplay.length
 								: participantsToDisplay.length + 1
 						)
@@ -117,6 +117,7 @@
 					</span>
 				</div>
 			</div>
+
 			<CallControls />
 		</Card.Content>
 	</Card.Root>

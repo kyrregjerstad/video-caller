@@ -8,6 +8,7 @@ import {
 	PUBLIC_WS_URL
 } from '$env/static/public';
 import { SvelteMap } from 'svelte/reactivity';
+import { localStore } from '$lib/utils/local-store.svelte';
 
 const CALL_STATE_KEY = Symbol('CALL_STATE');
 
@@ -243,23 +244,31 @@ export class CallManager {
 	mediaState = new MediaState();
 	peers = new SvelteMap<string, PeerState>();
 	wsUrl = PUBLIC_WS_URL;
-	isPipModeEnabled = $state(true); // User preference for PIP mode
+	isPipModeEnabled = $state(false);
+	participantId = localStore<string | null>('participant-id', null);
 
 	constructor(private callId: string) {
 		// Initialize empty peers map
+		if (!this.participantId.value) {
+			// Generate a random ID if none exists
+			this.participantId.value = crypto.randomUUID();
+		}
+
+		// Automatically disable PIP mode when there are no peers
+		$effect.root(() => {
+			if (this.peers.size === 0) {
+				this.isPipModeEnabled = false;
+			}
+		});
 	}
 
 	togglePipMode() {
 		this.isPipModeEnabled = !this.isPipModeEnabled;
 	}
 
-	get shouldShowPip() {
-		return this.isPipModeEnabled;
-	}
-
 	private wsSend(data: WebSocketMessage) {
 		if (this.ws) {
-			this.ws.send(JSON.stringify(data));
+			this.ws.send(JSON.stringify({ ...data, participantId: this.participantId.value }));
 		}
 	}
 
@@ -274,7 +283,6 @@ export class CallManager {
 
 	async handleMessages(event: MessageEvent) {
 		const message = JSON.parse(event.data);
-		console.log(message);
 
 		if (!message.id && message.type !== 'ready') {
 			console.error('Message missing participant ID:', message);
@@ -317,7 +325,9 @@ export class CallManager {
 		try {
 			await this.mediaState.startLocalPlayback();
 
-			this.ws = new WebSocket(`${this.wsUrl}/${this.callId}`);
+			this.ws = new WebSocket(
+				`${this.wsUrl}/${this.callId}?participantId=${this.participantId.value}`
+			);
 			this.ws.onmessage = (e) => this.handleMessages(e);
 			this.ws.onopen = () => this.wsSend({ type: 'joined' });
 		} catch (error) {
