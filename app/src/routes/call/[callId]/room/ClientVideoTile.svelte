@@ -27,6 +27,15 @@
 	let isDragging = $state(false);
 	let isResizing = $state(false);
 
+	const TRANSITION_DURATION = '300ms';
+	const TRANSITION_EASING = 'cubic-bezier(0.16, 1, 0.3, 1)';
+
+	$effect(() => {
+		return () => {
+			callManager.mediaState.cleanup();
+		};
+	});
+
 	interface DraggableParams {
 		onDrag?: (x: number, y: number) => void;
 	}
@@ -156,8 +165,10 @@
 		isDragging && 'cursor-grabbing'
 	)}
 	style={isPipMode
-		? `transform: translate3d(${position.current.x}px, ${position.current.y}px, 0); width: ${width}px; height: ${height}px;`
-		: ''}
+		? `transform: translate3d(${position.current.x}px, ${position.current.y}px, 0); width: ${width}px; height: ${height}px;${!isDragging && !isResizing ? ` transition: transform ${TRANSITION_DURATION} ${TRANSITION_EASING}, width ${TRANSITION_DURATION} ${TRANSITION_EASING}, height ${TRANSITION_DURATION} ${TRANSITION_EASING};` : ''}`
+		: !isDragging && !isResizing
+			? `transition: width ${TRANSITION_DURATION} ${TRANSITION_EASING}, height ${TRANSITION_DURATION} ${TRANSITION_EASING};`
+			: ''}
 	use:draggable={{
 		onDrag: (x, y) => position.set({ x, y })
 	}}
