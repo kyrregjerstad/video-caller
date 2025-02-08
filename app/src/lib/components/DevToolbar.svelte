@@ -15,15 +15,6 @@
 			<Card.Description>Add or remove mock participants for testing</Card.Description>
 		</Card.Header>
 		<Card.Content class="space-y-4">
-			<div class="flex flex-wrap gap-2">
-				<Button variant="outline" onclick={() => mockCallManager.addMockParticipant()}>
-					Add Participant
-				</Button>
-				<Button variant="destructive" onclick={() => mockCallManager.removeAllMockParticipants()}>
-					Remove All
-				</Button>
-			</div>
-
 			<div class="space-y-2">
 				<h3 class="text-sm font-medium">Connected Participants</h3>
 				{#if mockCallManager.peers.size === 0}
@@ -46,5 +37,15 @@
 				{/if}
 			</div>
 		</Card.Content>
+		<Card.Footer>
+			<div class="flex flex-wrap gap-2">
+				<Button variant="outline" onclick={() => mockCallManager.addMockParticipant()}>
+					Add Participant
+				</Button>
+				<Button variant="destructive" onclick={() => mockCallManager.removeAllMockParticipants()}>
+					Remove All
+				</Button>
+			</div>
+		</Card.Footer>
 	</Card.Root>
 {/if}
