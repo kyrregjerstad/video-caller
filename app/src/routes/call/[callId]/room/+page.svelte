@@ -1,16 +1,15 @@
 <script lang="ts">
 	import { page } from '$app/state';
-
+	import CallControls from './CallControls.svelte';
+	import ClientVideoTile from './ClientVideoTile.svelte';
+	import PeerVideoTile from './PeerVideoTile.svelte';
 	import DevToolbar from '$lib/components/DevToolbar.svelte';
 	import Button from '$lib/components/ui/button/button.svelte';
 	import * as Card from '$lib/components/ui/card';
 	import { CallManager, setCallManager } from '$lib/state/call.svelte';
 	import { setMockCallManager } from '$lib/state/mock-call.svelte';
-	import { cn } from '$lib/utils';
-	import { MicIcon, MicOffIcon, VideoIcon, VideoOffIcon } from 'lucide-svelte';
 	import { toast } from 'svelte-sonner';
 
-	// Get the call ID from the route parameters
 	const callId = page.params.callId;
 
 	const callManager = setCallManager(new CallManager(callId));
@@ -18,7 +17,6 @@
 
 	let peers = $derived([...callManager.peers.values(), ...(mockCallManager?.peers.values() || [])]);
 
-	// Handle mock participant video streams
 	$effect(() => {
 		if (mockCallManager) {
 			for (const peer of mockCallManager.peers.values()) {
@@ -73,77 +71,14 @@
 				</div>
 			{/if}
 			<div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
-				<!-- Local video -->
-				<div class="relative aspect-video w-full overflow-hidden rounded-lg bg-gray-800">
-					<!-- svelte-ignore element_invalid_self_closing_tag -->
-					<video
-						bind:this={callManager.mediaState.localVideo}
-						autoplay
-						playsinline
-						muted
-						class="h-full w-full object-cover"
-					/>
-					<div class="absolute bottom-4 left-4 rounded bg-gray-900/80 px-2 py-1 text-sm text-white">
-						You
-					</div>
-				</div>
+				<ClientVideoTile />
 
-				<!-- Remote videos -->
 				{#each peers as peer}
-					<div class="relative aspect-video w-full overflow-hidden rounded-lg bg-gray-800">
-						<!-- svelte-ignore a11y_media_has_caption -->
-						<!-- svelte-ignore element_invalid_self_closing_tag -->
-						<video
-							bind:this={peer.peerVideo}
-							autoplay
-							playsinline
-							class={cn(
-								'h-full w-full object-cover',
-								peer.callState === 'connected' && 'opacity-100',
-								peer.callState === 'connecting' && 'opacity-50',
-								peer.callState === 'disconnected' && 'opacity-0'
-							)}
-						/>
-						<div
-							class="absolute bottom-4 left-4 rounded bg-gray-900/80 px-2 py-1 text-sm text-white"
-						>
-							Participant {peer.id.slice(0, 4)}
-						</div>
-					</div>
+					<PeerVideoTile {peer} />
 				{/each}
 			</div>
 
-			<!-- Call controls -->
-			<div class="mt-4 flex justify-center gap-4">
-				<Button
-					variant="secondary"
-					onclick={() => callManager.mediaState.toggleAudio()}
-					class={cn(
-						!callManager.mediaState.isAudioEnabled &&
-							'bg-destructive text-destructive-foreground hover:bg-destructive/90'
-					)}
-				>
-					{#if callManager.mediaState.isAudioEnabled}
-						<MicIcon />
-					{:else}
-						<MicOffIcon />
-					{/if}
-				</Button>
-				<Button
-					variant="secondary"
-					onclick={() => callManager.mediaState.toggleVideo()}
-					class={cn(
-						!callManager.mediaState.isVideoEnabled &&
-							'bg-destructive text-destructive-foreground hover:bg-destructive/90'
-					)}
-				>
-					{#if callManager.mediaState.isVideoEnabled}
-						<VideoIcon />
-					{:else}
-						<VideoOffIcon />
-					{/if}
-				</Button>
-			</div>
+			<CallControls />
 		</Card.Content>
 	</Card.Root>
 
