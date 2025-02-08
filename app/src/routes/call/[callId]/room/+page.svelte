@@ -5,14 +5,13 @@
 	import * as Card from '$lib/components/ui/card';
 	import { setCallManager } from '$lib/state/call.svelte';
 	import { setMockCallManager } from '$lib/state/mock-call.svelte';
+	import { cn } from '$lib/utils';
 	import { toast } from 'svelte-sonner';
-	import { fly } from 'svelte/transition';
-	import { cubicOut } from 'svelte/easing';
 	import { flip } from 'svelte/animate';
+	import { cubicOut } from 'svelte/easing';
 	import CallControls from './CallControls.svelte';
 	import ClientVideoTile from './ClientVideoTile.svelte';
 	import PeerVideoTile from './PeerVideoTile.svelte';
-	import { cn } from '$lib/utils';
 
 	const GRID_COLS = {
 		0: 'grid-cols-1',
