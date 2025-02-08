@@ -1,11 +1,16 @@
 <script lang="ts">
 	import { type Peer } from '$lib/state/call.svelte';
 	import { cn } from '$lib/utils';
+	import { cubicOut } from 'svelte/easing';
+	import { fly } from 'svelte/transition';
 
 	let { peer }: { peer: Peer } = $props();
 </script>
 
-<div class="relative h-full w-full overflow-hidden rounded-lg bg-gray-800">
+<div
+	class="relative h-full w-full overflow-hidden rounded-lg bg-gray-800"
+	transition:fly={{ duration: 300, y: 100, delay: 300, easing: cubicOut }}
+>
 	<!-- svelte-ignore a11y_media_has_caption -->
 	<!-- svelte-ignore element_invalid_self_closing_tag -->
 	<video

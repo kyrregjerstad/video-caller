@@ -8,6 +8,7 @@
 	import { toast } from 'svelte-sonner';
 	import { fly } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
+	import { flip } from 'svelte/animate';
 	import CallControls from './CallControls.svelte';
 	import ClientVideoTile from './ClientVideoTile.svelte';
 	import PeerVideoTile from './PeerVideoTile.svelte';
@@ -108,18 +109,20 @@
 			<div class="relative h-[calc(100dvh-16rem)] w-full">
 				<div
 					class={cn(
-						'grid h-full w-full gap-4',
+						'grid  w-full gap-4',
 						getGridCols(
 							callManager.shouldShowPip
 								? participantsToDisplay.length
 								: participantsToDisplay.length + 1
 						)
 					)}
-					in:fly={{ y: 20, duration: 300, easing: cubicOut }}
 				>
-					{#each participantsToDisplay as peer}
-						<PeerVideoTile {peer} />
+					{#each participantsToDisplay as peer (peer.id)}
+						<span animate:flip={{ duration: 500, easing: cubicOut }}>
+							<PeerVideoTile {peer} />
+						</span>
 					{/each}
+
 					<ClientVideoTile />
 				</div>
 			</div>
