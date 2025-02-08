@@ -6,6 +6,8 @@
 	import { setCallManager } from '$lib/state/call.svelte';
 	import { setMockCallManager } from '$lib/state/mock-call.svelte';
 	import { toast } from 'svelte-sonner';
+	import { fly } from 'svelte/transition';
+	import { cubicOut } from 'svelte/easing';
 	import CallControls from './CallControls.svelte';
 	import ClientVideoTile from './ClientVideoTile.svelte';
 	import PeerVideoTile from './PeerVideoTile.svelte';
@@ -16,6 +18,7 @@
 	const mockCallManager = setMockCallManager();
 
 	let peers = $derived([...callManager.peers.values(), ...(mockCallManager?.peers.values() || [])]);
+	let isPipMode = $derived(peers.length > 0);
 
 	$effect(() => {
 		if (mockCallManager) {
@@ -70,12 +73,21 @@
 					</Button>
 				</div>
 			{/if}
-			<div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
-				<ClientVideoTile />
+			<div class="relative h-[calc(100vh-16rem)] w-full">
+				{#if peers.length > 0}
+					<div
+						class="grid h-full w-full gap-4"
+						class:grid-cols-2={peers.length === 1}
+						class:grid-cols-3={peers.length >= 2}
+						in:fly={{ y: 20, duration: 300, easing: cubicOut }}
+					>
+						{#each peers as peer}
+							<PeerVideoTile {peer} />
+						{/each}
+					</div>
+				{/if}
 
-				{#each peers as peer}
-					<PeerVideoTile {peer} />
-				{/each}
+				<ClientVideoTile {isPipMode} />
 			</div>
 
 			<CallControls />

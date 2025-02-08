@@ -5,7 +5,7 @@
 	let { peer }: { peer: Peer } = $props();
 </script>
 
-<div class="relative aspect-video w-full overflow-hidden rounded-lg bg-gray-800">
+<div class="relative h-full w-full overflow-hidden rounded-lg bg-gray-800">
 	<!-- svelte-ignore a11y_media_has_caption -->
 	<!-- svelte-ignore element_invalid_self_closing_tag -->
 	<video

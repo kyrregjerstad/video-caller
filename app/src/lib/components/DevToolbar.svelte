@@ -9,7 +9,7 @@
 </script>
 
 {#if isDevMode && mockCallManager}
-	<Card.Root class="fixed bottom-4 right-4 z-50 w-80">
+	<Card.Root class="fixed bottom-4 left-4 z-50 w-80">
 		<Card.Header>
 			<Card.Title>Development Tools</Card.Title>
 			<Card.Description>Add or remove mock participants for testing</Card.Description>
